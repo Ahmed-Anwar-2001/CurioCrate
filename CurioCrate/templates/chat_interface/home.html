@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CurioCrate - Your AI Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Apply Inter font globally and set antialiased for smoother text */
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Custom scrollbar styles for Webkit browsers (Chrome, Safari, Edge) */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px; /* Width of the scrollbar */
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1f2937; /* Tailwind gray-800 - background of the scrollbar track */
+            border-radius: 10px; /* Rounded corners for the track */
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4b5563; /* Tailwind gray-600 - color of the scrollbar thumb */
+            border-radius: 10px; /* Rounded corners for the thumb */
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* Tailwind gray-500 - color of the thumb on hover */
+        }
+
+        /* For Firefox (less customization options) */
+        .custom-scrollbar {
+            scrollbar-width: thin; /* "auto" or "thin" */
+            scrollbar-color: #4b5563 #1f2937; /* thumb color track color */
+        }
+
+        /* Ensure the main container takes full viewport height */
+        html, body, #app {
+            height: 100%;
+            margin: 0;
+            overflow: hidden; /* Prevent body scroll, let chat container handle it */
+        }
+
+        /* Custom glow effect for focus/hover states (optional, can be replaced by Tailwind rings) */
+        .glow-shadow:focus, .glow-shadow:hover {
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.6); /* purple-500 with opacity */
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100">
+    <div id="app" class="flex flex-col h-screen">
+        <header class="flex items-center justify-between p-4 bg-gray-900 shadow-lg z-20">
+            <div class="flex items-center space-x-2">
+                <svg class="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13.5m0-13.5c-4.142 0-6.002 1.23-9.106 3.07M12 6.253c4.142 0 6.002 1.23 9.106 3.07M12 6.253V1.253m0 13.5c-4.142 0-6.002 1.23-9.106 3.07M12 19.753c4.142 0 6.002 1.23 9.106 3.07M12 19.753V23.753"></path>
+                </svg>
+                <h1 class="text-2xl font-bold text-gray-50">CurioCrate</h1>
+            </div>
+
+            <div class="relative">
+                <button id="userMenuButton" class="flex items-center space-x-2 p-2 rounded-full bg-gray-800 hover:bg-gray-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 glow-shadow">
+                    <span id="userNameDisplay" class="font-medium text-gray-200">Guest</span>
+                    <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </button>
+
+                <div id="userMenuDropdown" class="hidden absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg py-2 z-10 transition-all duration-300 ease-out transform origin-top-right scale-95 opacity-0">
+                    <a id="profileLink" href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">Profile</a>
+                    <a id="interestsLink" href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">Interests</a>
+                    <a id="settingsLink" href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">Settings</a>
+                    <div id="authActions" class="border-t border-gray-700 mt-2 pt-2">
+                        </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 flex flex-col p-4 overflow-hidden">
+            <div id="messagesContainer" class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4 bg-gray-900 rounded-lg shadow-inner">
+                <div class="flex justify-start">
+                    <div class="bg-gray-800 text-gray-100 p-3 rounded-lg max-w-xl shadow-md">
+                        <p>Hello! I am CurioCrate, your AI assistant. Tell me what product or service you are looking for, and I will help you find the best options.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 p-4 bg-gray-900 rounded-lg shadow-lg flex items-end space-x-3">
+                <textarea
+                    id="chatInput"
+                    class="flex-1 p-3 bg-gray-800 text-gray-100 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 glow-shadow custom-scrollbar"
+                    placeholder="Ask CurioCrate anything..."
+                    rows="1"
+                    style="min-height: 48px; max-height: 200px;"
+                ></textarea>
+                <button
+                    id="sendMessageButton"
+                    class="p-3 bg-purple-600 text-white rounded-full shadow-lg hover:bg-purple-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-75 transform hover:scale-105 glow-shadow"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send">
+                        <path d="m22 2-7 7m7-7-7 7L2 12l7 7 7-7 7 7V2z"/>
+                    </svg>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // DOM Elements
+        const messagesContainer = document.getElementById('messagesContainer');
+        const chatInput = document.getElementById('chatInput');
+        const sendMessageButton = document.getElementById('sendMessageButton');
+        const userMenuButton = document.getElementById('userMenuButton');
+        const userMenuDropdown = document.getElementById('userMenuDropdown');
+        const userNameDisplay = document.getElementById('userNameDisplay');
+        // New DOM elements for conditional UI
+        const profileLink = document.getElementById('profileLink');
+        const interestsLink = document.getElementById('interestsLink');
+        const settingsLink = document.getElementById('settingsLink');
+        const authActions = document.getElementById('authActions');
+
+        // State Variables
+        let isLoggedIn = false;
+        let userName = 'Guest';
+        let promptCount = 0;
+        const maxGuestPrompts = 3; // Maximum prompts allowed for a guest user
+
+        // Function to scroll to the bottom of the messages container
+        function scrollToBottom() {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Function to append a message to the chat interface
+        function appendMessage(type, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('flex', type === 'user' ? 'justify-end' : 'justify-start');
+
+            const messageBubble = document.createElement('div');
+            messageBubble.classList.add(
+                'p-3',
+                'rounded-lg',
+                'max-w-xl',
+                'shadow-md',
+                type === 'user' ? 'bg-purple-700' : 'bg-gray-800', // User messages more vibrant
+                type === 'user' ? 'text-white' : 'text-gray-100',
+                'break-words' // Ensure long words wrap
+            );
+            messageBubble.textContent = text;
+            messageDiv.appendChild(messageBubble);
+            messagesContainer.appendChild(messageDiv);
+            scrollToBottom(); // Scroll to the new message
+        }
+
+        // Function to handle sending a message
+        async function handleSendMessage() {
+            const inputValue = chatInput.value.trim();
+            if (inputValue === '') return; // Do not send empty messages
+
+            // Append user message
+            appendMessage('user', inputValue);
+            chatInput.value = ''; // Clear input field
+            adjustTextareaHeight(); // Reset textarea height
+
+            // Logic for guest prompt limit
+            if (!isLoggedIn) {
+                promptCount++;
+                if (promptCount > maxGuestPrompts) {
+                    appendMessage('bot', "You've reached your prompt limit as a guest. Please sign up or log in to continue chatting!");
+                    sendMessageButton.disabled = true; // Disable send button for guests
+                    chatInput.disabled = true; // Disable input for guests
+                    chatInput.placeholder = "Please log in or sign up to continue...";
+                    return; // Stop further processing for guest messages if limit reached
+                }
+            }
+
+            // Simulate API call to backend for bot response
+            // In a real application, you would make a fetch request here:
+            // const response = await fetch('/api/chat', {
+            //   method: 'POST',
+            //   headers: { 'Content-Type': 'application/json' },
+            //   body: JSON.stringify({ message: inputValue })
+            // });
+            // const data = await response.json();
+            // appendMessage('bot', data.botResponse);
+            setTimeout(() => {
+                appendMessage('bot', `Searching for "${inputValue}"... I'd typically fetch data from Trustpilot here and suggest companies/services.`);
+            }, 1000); // Simulate a delay for the bot's response
+        }
+
+        // Function to dynamically adjust textarea height
+        function adjustTextareaHeight() {
+            chatInput.style.height = 'auto'; // Reset height
+            chatInput.style.height = chatInput.scrollHeight + 'px'; // Set to scroll height
+        }
+
+        // Function to update the user menu based on login status
+        function updateUserMenu() {
+            userNameDisplay.textContent = userName;
+
+            if (isLoggedIn) {
+                profileLink.classList.remove('hidden');
+                interestsLink.classList.remove('hidden');
+                settingsLink.classList.remove('hidden');
+                profileLink.style.display = 'block'; // Ensure display is block
+                interestsLink.style.display = 'block';
+                settingsLink.style.display = 'block';
+
+                authActions.innerHTML = `
+                    <button id="logoutButton" class="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">
+                        Logout
+                    </button>
+                `;
+                // Re-attach event listener for logout button as it's dynamically created
+                document.getElementById('logoutButton').addEventListener('click', toggleLogin);
+            } else {
+                profileLink.classList.add('hidden');
+                interestsLink.classList.add('hidden');
+                settingsLink.classList.add('hidden');
+                profileLink.style.display = 'none'; // Hide completely
+                interestsLink.style.display = 'none';
+                settingsLink.style.display = 'none';
+
+                authActions.innerHTML = `
+                    <a href="/login/" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">Login</a>
+                    <a href="/signup/" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">Signup</a>
+                `;
+            }
+        }
+
+        // Function to toggle login status (simulated)
+        function toggleLogin() {
+            isLoggedIn = !isLoggedIn;
+            userName = isLoggedIn ? 'CurioUser' : 'Guest';
+            promptCount = 0; // Reset prompt count on login/logout
+
+            // Re-enable chat for logged-in users
+            sendMessageButton.disabled = false;
+            chatInput.disabled = false;
+            chatInput.placeholder = "Ask CurioCrate anything...";
+
+            updateUserMenu(); // Update the menu immediately
+
+            // Toggle user menu visibility (existing logic)
+            userMenuDropdown.classList.add('hidden');
+            userMenuDropdown.classList.remove('scale-100', 'opacity-100');
+            userMenuDropdown.classList.add('scale-95', 'opacity-0');
+        }
+
+        // Event Listeners
+        sendMessageButton.addEventListener('click', handleSendMessage);
+
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // Prevent new line
+                handleSendMessage();
+            }
+        });
+
+        chatInput.addEventListener('input', adjustTextareaHeight); // Adjust height on input
+
+        userMenuButton.addEventListener('click', (event) => {
+            event.stopPropagation(); // Prevent the document click listener from immediately closing it
+            if (userMenuDropdown.classList.contains('hidden')) {
+                // Show the dropdown
+                userMenuDropdown.classList.remove('hidden');
+                // Force reflow to ensure transition applies
+                userMenuDropdown.offsetWidth; // Trigger reflow
+                userMenuDropdown.classList.remove('scale-95', 'opacity-0');
+                userMenuDropdown.classList.add('scale-100', 'opacity-100');
+            } else {
+                // Hide the dropdown
+                userMenuDropdown.classList.remove('scale-100', 'opacity-100');
+                userMenuDropdown.classList.add('scale-95', 'opacity-0');
+                userMenuDropdown.addEventListener('transitionend', function handler() {
+                    userMenuDropdown.classList.add('hidden');
+                    userMenuDropdown.removeEventListener('transitionend', handler);
+                }, { once: true });
+            }
+        });
+
+        // Close dropdown if clicked outside
+        document.addEventListener('click', (event) => {
+            if (!userMenuButton.contains(event.target) && !userMenuDropdown.contains(event.target)) {
+                if (!userMenuDropdown.classList.contains('hidden')) {
+                    userMenuDropdown.classList.add('scale-95', 'opacity-0');
+                    userMenuDropdown.addEventListener('transitionend', function handler() {
+                        userMenuDropdown.classList.add('hidden');
+                        userMenuDropdown.removeEventListener('transitionend', handler);
+                    }, { once: true });
+                }
+            }
+        });
+
+        // Initial setup on page load
+        window.addEventListener('load', () => {
+            adjustTextareaHeight();
+            updateUserMenu(); // Initialize the menu state based on isLoggedIn
+        });
+    </script>
+</body>
+</html>
