@@ -1,5 +1,5 @@
 from django.urls import path
-from CurioAgent.views import home
+from CurioAgent.views import (home, upload_csv_view, chat_api_view)
 from .views import (
     SignupAPIView, SignupPageView,
     LoginAPIView, TokenRefreshAPIView, LoginPageView, VerifyEmailView
@@ -25,4 +25,11 @@ urlpatterns = [
 
     # Email verification
     path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
+
+    # Ingest Data from CSV
+    path('upload-trustpilot-csv/', upload_csv_view, name='upload_csv'),
+
+
+    # Chat API
+    path('api/chat/', chat_api_view, name='chat_api'),
 ]

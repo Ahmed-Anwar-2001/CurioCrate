@@ -3,7 +3,8 @@ from django.contrib.auth.models import (
     AbstractBaseUser, PermissionsMixin, BaseUserManager
 )
 from django.utils import timezone
-
+import re
+from urllib.parse import urlparse
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -45,3 +46,39 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+
+
+
+class TrustpilotCompanyLink(models.Model):
+    """
+    Stores the basic Trustpilot review links.
+    """
+    link = models.URLField(max_length=500, unique=True, db_index=True)
+    company_key = models.CharField(max_length=255, unique=True, db_index=True)
+    category = models.CharField(max_length=255, blank=True, null=True)
+    subcategory = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return self.company_key
+
+class TrustpilotBusinessData(models.Model):
+    """
+    Stores detailed, personalized company information.
+    """
+    # This key is extracted from the company website URL to link with TrustpilotCompanyLink.
+    company_key = models.CharField(max_length=255, unique=True, db_index=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+    email = models.EmailField(max_length=255, blank=True, null=True)
+    company = models.CharField(max_length=255, blank=True, null=True)
+    location = models.TextField(blank=True, null=True)
+    phone = models.CharField(max_length=50, blank=True, null=True)
+    website = models.URLField(max_length=500, blank=True, null=True)
+    category = models.CharField(max_length=255, blank=True, null=True)
+    subcategory = models.CharField(max_length=255, blank=True, null=True)
+    review_count = models.CharField(max_length=20, blank=True, null=True)
+    ratings = models.DecimalField(max_digits=3, decimal_places=1, blank=True, null=True)
+
+    def __str__(self):
+        return self.name or self.company_key
