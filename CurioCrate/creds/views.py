@@ -8,7 +8,10 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth import authenticate, login
+from django.conf import settings
 
+from django.contrib.auth import logout
+from django.contrib.auth.decorators import login_required
 from .serializers import SignupSerializer, CustomTokenObtainPairSerializer
 
 from .utils import send_verification_email
@@ -124,14 +127,7 @@ class LoginAPIView(TokenObtainPairView):
 class TokenRefreshAPIView(TokenRefreshView):
     permission_classes = [permissions.AllowAny]
 
-from django.conf import settings
 
-# creds/views.py
-from django.contrib.auth import login
-from django.shortcuts import render, redirect
-from django.views import View
-from django.contrib import messages
-from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
@@ -144,7 +140,6 @@ class LoginPageView(View):
         password    = request.POST.get("password")
         remember_me = request.POST.get("remember_me") == "on"
 
-        # SHORT-CIRCUIT: manual lookup + check_password
         try:
             user = User.objects.get(email__iexact=email)
         except User.DoesNotExist:
@@ -164,7 +159,53 @@ class LoginPageView(View):
             return render(request, "auth/login.html", status=403)
 
         # OK, session login
-        user.backend = 'creds.backend.EmailBackend'
+        user.backend = 'creds.backends.EmailBackend'
         login(request, user)
         request.session.set_expiry(1209600 if remember_me else 0)
         return redirect("creds:home")
+
+
+
+
+class LogoutView(View):
+    def get(self, request, *args, **kwargs):
+        # Log the user out and redirect to the login page (or homepage)
+        logout(request)
+        return redirect("creds:login-page")
+
+
+@login_required
+def profile_view(request):
+    """
+    Show the currently logged-in user’s profile information.
+    """
+    # request.user is guaranteed to be a valid User (since @login_required is applied)
+    context = {
+        'user': request.user,
+    }
+    return render(request, "chat_interface/profile.html", context)
+
+
+
+from .forms import UserForm
+
+@login_required
+def settings_view(request):
+    """
+    Let a logged-in user edit their profile (username & email).
+    """
+    user = request.user
+
+    if request.method == "POST":
+        form = UserForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Your profile has been updated.")
+            return redirect("creds:settings")
+        else:
+            messages.error(request, "Please fix the errors below.")
+    else:
+        # GET: prepopulate with current user data
+        form = UserForm(instance=user)
+
+    return render(request, "chat_interface/settings.html", {"form": form})

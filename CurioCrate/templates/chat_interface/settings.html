@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings – {{ user.username }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <div class="max-w-2xl mx-auto p-6">
+    <h1 class="text-3xl font-semibold mb-6">Settings</h1>
+
+    {# Display success/error messages #}
+    {% if messages %}
+      <div class="mb-4 space-y-2">
+        {% for message in messages %}
+          <div
+            class="
+              px-4 py-2 rounded
+              {% if message.tags == 'error' %}bg-red-100 text-red-700{% endif %}
+              {% if message.tags == 'success' %}bg-green-100 text-green-700{% endif %}
+            "
+          >
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <div class="bg-white shadow-md rounded-lg p-6">
+      <form method="POST" novalidate>
+        {% csrf_token %}
+        {# Loop through form fields #}
+        {% for field in form %}
+          <div class="mb-4">
+            <label for="{{ field.id_for_label }}" class="block text-gray-600 font-medium mb-1">
+              {{ field.label }}
+              {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            {{ field }}
+            {# Show error if any for this field #}
+            {% if field.errors %}
+              <p class="text-red-600 text-sm mt-1">
+                {{ field.errors|striptags }}
+              </p>
+            {% endif %}
+          </div>
+        {% endfor %}
+
+        <div class="mt-6 flex space-x-3">
+          <button
+            type="submit"
+            class="bg-purple-600 text-white px-5 py-2 rounded hover:bg-purple-700 transition-colors duration-200"
+          >
+            Save Changes
+          </button>
+          <a
+            href="{% url 'creds:profile' %}"
+            class="bg-gray-300 text-gray-800 px-5 py-2 rounded hover:bg-gray-400 transition-colors duration-200"
+          >
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <div class="mt-8">
+      <a
+        href="{% url 'creds:home' %}"
+        class="text-gray-600 hover:underline"
+      >
+        ← Back to Home
+      </a>
+    </div>
+  </div>
+</body>
+</html>

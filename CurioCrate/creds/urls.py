@@ -2,7 +2,7 @@ from django.urls import path
 from CurioAgent.views import (home, upload_csv_view, chat_api_view)
 from .views import (
     SignupAPIView, SignupPageView,
-    LoginAPIView, TokenRefreshAPIView, LoginPageView, VerifyEmailView
+    LoginAPIView, TokenRefreshAPIView, LoginPageView, VerifyEmailView, LogoutView, profile_view, settings_view
 )
 
 app_name = 'creds'
@@ -22,6 +22,12 @@ urlpatterns = [
 
     # Login page
     path('login/', LoginPageView.as_view(), name='login-page'),
+    # Logout
+    path("logout/", LogoutView.as_view(), name="logout"),
+
+    # Profile & Settings
+    path('profile/', profile_view, name='profile'),
+    path('settings/', settings_view, name='settings'),
 
     # Email verification
     path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),

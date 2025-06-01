@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+  <title>Profile – {{ user.username }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-900">
+  <div class="max-w-2xl mx-auto p-6">
+    <h1 class="text-3xl font-semibold mb-4">Your Profile</h1>
+
+    <div class="bg-white shadow-md rounded-lg p-6">
+      <div class="mb-4">
+        <label class="block text-gray-600 font-medium">Username:</label>
+        <p class="text-lg">{{ user.username }}</p>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-gray-600 font-medium">Email:</label>
+        <p class="text-lg">{{ user.email }}</p>
+      </div>
+
+      {% if user.is_verified %}
+        <div class="mb-4">
+          <label class="block text-gray-600 font-medium">Email Verified:</label>
+          <p class="text-green-600 font-semibold">Yes</p>
+        </div>
+      {% else %}
+        <div class="mb-4">
+          <label class="block text-gray-600 font-medium">Email Verified:</label>
+          <p class="text-red-600 font-semibold">No</p>
+          <a
+            href="{% url 'creds:verify-email' %}"
+            class="text-purple-600 hover:underline"
+          >
+            Verify Now
+          </a>
+        </div>
+      {% endif %}
+
+      <div class="mb-4">
+        <label class="block text-gray-600 font-medium">Date Joined:</label>
+        <p class="text-lg">{{ user.date_joined|date:"F j, Y, g:i a" }}</p>
+      </div>
+
+    
+      <div class="mb-4">
+        <label class="block text-gray-600 font-medium">Bio:</label>
+        <p class="text-lg">{{ user.profile.bio }}</p>
+      </div>
+      <div class="mb-4">
+        <label class="block text-gray-600 font-medium">Avatar:</label>
+        <img src="{{ user.profile.avatar.url }}" alt="Avatar" class="w-24 h-24 rounded-full" />
+      </div>
+      
+
+      <div class="mt-6">
+        <a
+          href="{% url 'creds:home' %}"
+          class="inline-block bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+        >
+          Back to Home
+        </a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -98,8 +98,13 @@ AUTHENTICATION_BACKENDS = [
 # ————————————————————————————————————————————————————————————
 # SECURE COOKIE SETTINGS
 #————————————————————————————————————————————————————————————
-SESSION_COOKIE_SECURE       = True    # only send session cookie over HTTPS
-CSRF_COOKIE_SECURE          = True    # only send CSRF cookie over HTTPS
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+if DEBUG:
+    SESSION_COOKIE_SECURE = False   # allow session cookies over HTTP
+    CSRF_COOKIE_SECURE    = False
+else:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE    = True
 SESSION_COOKIE_HTTPONLY     = True    # JavaScript can’t read the cookie
 CSRF_COOKIE_HTTPONLY        = True    # ditto for CSRF token
 SECURE_BROWSER_XSS_FILTER   = True    # XSS filter in modern browsers
@@ -151,7 +156,7 @@ DATABASES = {
         'NAME': os.environ.get('POSTGRES_DB'),
         'USER': os.environ.get('POSTGRES_USER'),
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST', 'db'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
 
     }

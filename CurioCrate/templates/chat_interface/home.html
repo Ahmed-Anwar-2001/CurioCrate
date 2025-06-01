@@ -71,9 +71,9 @@
                 </button>
 
                 <div id="userMenuDropdown" class="hidden absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg py-2 z-10 transition-all duration-300 ease-out transform origin-top-right scale-95 opacity-0">
-                    <a id="profileLink" href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">Profile</a>
+                    <a id="profileLink" href="profile/" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">Profile</a>
                     <a id="interestsLink" href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">Interests</a>
-                    <a id="settingsLink" href="#" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">Settings</a>
+                    <a id="settingsLink" href="settings/" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">Settings</a>
                     <div id="authActions" class="border-t border-gray-700 mt-2 pt-2">
                         </div>
                 </div>
@@ -122,23 +122,28 @@
         const interestsLink = document.getElementById('interestsLink');
         const settingsLink = document.getElementById('settingsLink');
         const authActions = document.getElementById('authActions');
-    
+
         // State Variables
-        let isLoggedIn = false; // This should ideally come from a backend check in a real app
-        let userName = 'Guest';
+        // MODIFICATION START: Initialize isLoggedIn and userName from Django context
+        // The following lines assume your Django template context provides 'is_authenticated' (boolean)
+        // and 'user' (object with a 'username' attribute if authenticated).
+        let isLoggedIn = {{ is_authenticated|yesno:"true,false" }};
+        let userName = isLoggedIn ? '{{ user.username|default:"CurioUser"|escapejs }}' : 'Guest';
+        // MODIFICATION END
+
         let promptCount = 0;
         const maxGuestPrompts = 3; // Maximum prompts allowed for a guest user
-    
+
         // Function to scroll to the bottom of the messages container
         function scrollToBottom() {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
-    
+
         // Function to append a message to the chat interface
         function appendMessage(type, text) {
             const messageDiv = document.createElement('div');
             messageDiv.classList.add('flex', type === 'user' ? 'justify-end' : 'justify-start');
-    
+
             const messageBubble = document.createElement('div');
             messageBubble.classList.add(
                 'p-3',
@@ -154,18 +159,16 @@
             messagesContainer.appendChild(messageDiv);
             scrollToBottom(); // Scroll to the new message
         }
-    
+
         // Function to handle sending a message
         async function handleSendMessage() {
             const inputValue = chatInput.value.trim();
             if (inputValue === '') return; // Do not send empty messages
-    
-            // Append user message immediately
+
             appendMessage('user', inputValue);
             chatInput.value = ''; // Clear input field
             adjustTextareaHeight(); // Reset textarea height
-    
-            // Logic for guest prompt limit
+
             if (!isLoggedIn) {
                 promptCount++;
                 if (promptCount > maxGuestPrompts) {
@@ -173,11 +176,10 @@
                     sendMessageButton.disabled = true; // Disable send button for guests
                     chatInput.disabled = true; // Disable input for guests
                     chatInput.placeholder = "Please log in or sign up to continue...";
-                    return; // Stop further processing for guest messages if limit reached
+                    return;
                 }
             }
-    
-            // Display a "thinking..." message or similar while waiting for response
+
             const botThinkingMessage = document.createElement('div');
             botThinkingMessage.classList.add('flex', 'justify-start');
             const thinkingBubble = document.createElement('div');
@@ -185,131 +187,145 @@
             thinkingBubble.textContent = "Alfred is thinking...";
             botThinkingMessage.appendChild(thinkingBubble);
             messagesContainer.appendChild(botThinkingMessage);
-            scrollToBottom(); // Scroll to the new message including the thinking indicator
-    
-    
+            scrollToBottom();
+
+            // MODIFICATION START: Construct request body and add is_member if logged in
+            const requestBody = { message: inputValue };
+            if (isLoggedIn) {
+                requestBody.is_member = true;
+            }
+            // MODIFICATION END
+
             try {
-                const response = await fetch('/api/chat/', { // Call your Django API endpoint
+                const response = await fetch('/api/chat/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        // If you're using CSRF protection, you'd add:
-                        // 'X-CSRFToken': getCookie('csrftoken'),
+                        'X-CSRFToken': getCookie('csrftoken'), // Make sure this is correctly handled if CSRF is enabled for your API
                     },
-                    body: JSON.stringify({ message: inputValue })
+                    body: JSON.stringify(requestBody) // Use the modified requestBody
                 });
-    
-                // Remove the "thinking..." message ONLY AFTER the fetch promise resolves
+
                 if (messagesContainer.contains(botThinkingMessage)) {
                     messagesContainer.removeChild(botThinkingMessage);
                 }
-    
+
                 if (!response.ok) {
-                    const errorData = await response.json();
+                    const errorData = await response.json().catch(() => ({ error: "Failed to parse error response." })); // Graceful error parsing
                     throw new Error(errorData.error || `Server error: ${response.status} ${response.statusText}`);
                 }
-    
+
                 const data = await response.json();
-                // --- ADD THESE CONSOLE LOGS FOR DEBUGGING ---
                 console.log("Received bot response data:", data);
                 console.log("Bot response content:", data.botResponse);
-                // --- END DEBUG LOGS ---
-    
-                // Append the actual bot response
+
                 appendMessage('bot', data.botResponse);
-    
+
             } catch (error) {
                 console.error('Error sending message to backend:', error);
-                // Ensure the thinking message is removed even on error
                 if (messagesContainer.contains(botThinkingMessage)) {
                      messagesContainer.removeChild(botThinkingMessage);
                 }
                 appendMessage('bot', `Oops! Something went wrong: ${error.message}. Please try again.`);
             }
         }
-    
+
         // Function to dynamically adjust textarea height
         function adjustTextareaHeight() {
             chatInput.style.height = 'auto'; // Reset height
-            chatInput.style.height = chatInput.scrollHeight + 'px'; // Set to scroll height
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 200) + 'px'; // Set to scroll height, capped at max-height
         }
-    
+
         // Function to update the user menu based on login status
         function updateUserMenu() {
             userNameDisplay.textContent = userName;
-    
+
             if (isLoggedIn) {
                 profileLink.classList.remove('hidden');
                 interestsLink.classList.remove('hidden');
                 settingsLink.classList.remove('hidden');
-                profileLink.style.display = 'block'; // Ensure display is block
+                profileLink.style.display = 'block';
                 interestsLink.style.display = 'block';
                 settingsLink.style.display = 'block';
-    
+
                 authActions.innerHTML = `
                     <button id="logoutButton" class="w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">
                         Logout
                     </button>
                 `;
-                // Re-attach event listener for logout button as it's dynamically created
-                document.getElementById('logoutButton').addEventListener('click', toggleLogin);
+                // Ensure logout button has an event listener.
+                // Assuming logout redirects or updates state via backend and then reloads/updates isLoggedIn.
+                // For simulation, the toggleLogin function is used.
+                const logoutButton = document.getElementById('logoutButton');
+                if (logoutButton) {
+                     logoutButton.addEventListener('click', () => {
+                        // In a real app, this would likely be a call to a /logout/ endpoint
+                        // and then a redirect or page reload.
+                        // For now, we'll simulate with toggleLogin if you want to test UI changes without backend.
+                        // Or, ideally, it makes a request to Django's logout URL.
+                        window.location.href = '/logout/'; // Example logout URL
+                     });
+                }
             } else {
                 profileLink.classList.add('hidden');
                 interestsLink.classList.add('hidden');
                 settingsLink.classList.add('hidden');
-                profileLink.style.display = 'none'; // Hide completely
+                profileLink.style.display = 'none';
                 interestsLink.style.display = 'none';
                 settingsLink.style.display = 'none';
-    
+
+                // Ensure these hrefs point to your actual login/signup pages
                 authActions.innerHTML = `
                     <a href="/login/" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">Login</a>
                     <a href="/signup/" class="block px-4 py-2 text-sm text-gray-200 hover:bg-gray-700 rounded-md transition-colors duration-200">Signup</a>
                 `;
             }
         }
-    
-        // Function to toggle login status (simulated)
+
+        // Function to toggle login status (simulated - primarily for testing UI without full backend auth flow on client-side)
+        // In a real app, login status is determined by the backend session/token and page reloads or API calls would refresh this.
+        // This function is less relevant if isLoggedIn is correctly set on page load from Django.
         function toggleLogin() {
+            // This function is mostly for client-side simulation if you were testing without backend.
+            // With Django setting initial state, this function's role changes.
+            // For a real logout, you'd redirect to a logout URL.
+            // For a real login, user would go to a login page and then return to this page authenticated.
+            console.warn("toggleLogin is a simulated function. Actual login/logout should be handled via backend.");
             isLoggedIn = !isLoggedIn;
             userName = isLoggedIn ? 'CurioUser' : 'Guest';
-            promptCount = 0; // Reset prompt count on login/logout
-    
-            // Re-enable chat for logged-in users
+            promptCount = 0;
+
             sendMessageButton.disabled = false;
             chatInput.disabled = false;
             chatInput.placeholder = "Ask CurioCrate anything...";
-    
-            updateUserMenu(); // Update the menu immediately
-    
-            // Toggle user menu visibility (existing logic)
+
+            updateUserMenu();
+
             userMenuDropdown.classList.add('hidden');
             userMenuDropdown.classList.remove('scale-100', 'opacity-100');
             userMenuDropdown.classList.add('scale-95', 'opacity-0');
         }
-    
+
         // Event Listeners
         sendMessageButton.addEventListener('click', handleSendMessage);
-    
+
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault(); // Prevent new line
+                e.preventDefault();
                 handleSendMessage();
             }
         });
-    
-        chatInput.addEventListener('input', adjustTextareaHeight); // Adjust height on input
-    
+
+        chatInput.addEventListener('input', adjustTextareaHeight);
+
         userMenuButton.addEventListener('click', (event) => {
-            event.stopPropagation(); // Prevent the document click listener from immediately closing it
+            event.stopPropagation();
             if (userMenuDropdown.classList.contains('hidden')) {
-                // Show the dropdown
                 userMenuDropdown.classList.remove('hidden');
-                // Force reflow to ensure transition applies
-                userMenuDropdown.offsetWidth; // Trigger reflow
+                userMenuDropdown.offsetWidth;
                 userMenuDropdown.classList.remove('scale-95', 'opacity-0');
                 userMenuDropdown.classList.add('scale-100', 'opacity-100');
             } else {
-                // Hide the dropdown
                 userMenuDropdown.classList.remove('scale-100', 'opacity-100');
                 userMenuDropdown.classList.add('scale-95', 'opacity-0');
                 userMenuDropdown.addEventListener('transitionend', function handler() {
@@ -318,11 +334,11 @@
                 }, { once: true });
             }
         });
-    
-        // Close dropdown if clicked outside
+
         document.addEventListener('click', (event) => {
             if (!userMenuButton.contains(event.target) && !userMenuDropdown.contains(event.target)) {
                 if (!userMenuDropdown.classList.contains('hidden')) {
+                    userMenuDropdown.classList.remove('scale-100', 'opacity-100');
                     userMenuDropdown.classList.add('scale-95', 'opacity-0');
                     userMenuDropdown.addEventListener('transitionend', function handler() {
                         userMenuDropdown.classList.add('hidden');
@@ -331,21 +347,18 @@
                 }
             }
         });
-    
-        // Initial setup on page load
+
         window.addEventListener('load', () => {
             adjustTextareaHeight();
-            updateUserMenu(); // Initialize the menu state based on isLoggedIn
+            updateUserMenu(); // Initialize the menu state based on isLoggedIn set from Django
         });
-    
-        // Function to get CSRF token (if you enable CSRF protection)
+
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
                 const cookies = document.cookie.split(';');
                 for (let i = 0; i < cookies.length; i++) {
                     const cookie = cookies[i].trim();
-                    // Does this cookie string begin with the name we want?
                     if (cookie.substring(0, name.length + 1) === (name + '=')) {
                         cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                         break;
@@ -354,7 +367,6 @@
             }
             return cookieValue;
         }
-    
     </script>
 </body>
 </html>
