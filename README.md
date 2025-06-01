@@ -15,7 +15,7 @@ Follow these steps to get **CurioCrate** up and running on your local machine:
 
 ### 1. Clone the Repository
 ```bash
-git clone git@github.com:Ahmed-Anwar-2001/CurioCrate.git
+git clone --single-branch --branch master git@github.com:Ahmed-Anwar-2001/CurioCrate.git
 ```
 
 ### 2. Navigate to the Project Directory
